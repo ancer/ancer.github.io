@@ -1,0 +1,198 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title> Math </title>
+  
+  <script type='text/javascript' src='http://cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.1/angular.js'></script>
+  <script type='text/javascript' src='https://code.jquery.com/jquery-1.11.2.min.js'></script>
+  
+  <style type='text/css'>
+    input {
+		font-size:100%;
+	}
+
+	body {
+		font-size:300%;font-weight:bold; text-align: center
+	}
+
+	.records
+	{
+		position:absolute; font-size:30%; right: 0; width: 300px; height: 180px; text-align: left; font-weight: normal; overflow: auto;
+	}
+  </style>
+  
+
+
+<script type='text/javascript'>//<![CDATA[ 
+
+function defaultCtrl($scope, $timeout) {
+
+	function saveToStorage(ex)
+	{
+		localStorage.setItem(ex.name + "-correct", ex.correct);
+		localStorage.setItem(ex.name + "-incorrect", ex.incorrect);
+	}
+
+	function getFromStorage(ex)
+	{
+		ex.correct = Number(localStorage.getItem(ex.name + "-correct"));
+		ex.incorrect = Number(localStorage.getItem(ex.name + "-incorrect"));
+		ex.records = JSON.parse(localStorage.getItem(ex.name + "-records")) || [];
+	}
+
+	function saveCurrentRecord(ex)
+	{		
+		var newRecord = true;
+		for (var i = ex.records.length-1; i >= 0; i--) {
+			if (!ex.records[i].newRecord) continue;
+			newRecord = ex.correct_timer > ex.records[i].record;
+			break;
+		}
+		ex.records.push({date: new Date(), record: ex.correct_timer, newRecord: newRecord});
+		localStorage.setItem(ex.name + "-records", JSON.stringify(ex.records));
+	}
+    
+    function Exercise(name, number1Generator, number2Generator, operation, operationText, opacityLevel)
+    {
+		
+        this.name = name;
+        this.number1Generator = number1Generator;
+        this.number2Generator = number2Generator;
+        this.operation = operation;
+        this.operationText = operationText;
+        this.opacityLevel = opacityLevel || 1000;
+        this.correct = this.correct_timer = this.incorrect = this.incorrect_timer = 0;
+        this.nextNumbers = function() {
+            this.number1 = number1Generator();
+            this.number2 = number2Generator();
+        };
+        
+        this.timerText = "Таймер";
+		this.timer = this.timerText;
+        
+        this.timer_started = false;
+        this.color = "black";
+        
+        this.nextNumbers();
+		getFromStorage(this);
+    }
+
+    function Mul(num, opacityLevel) {
+        return new Exercise(
+        "mul" + num,
+        function () { return Math.floor(Math.random() * 11); },
+        function () { return num; },
+        function (a, b) { return a * b; },
+        "x",
+        opacityLevel);
+    }
+    
+    $scope.exercises = [Mul(3), Mul(4, 1200)];
+            
+    $scope.enter = function(ex, $event) {
+        if ($event.keyCode != 13) return;
+        if (ex.answer == "") return;
+        if (ex.color != "black") return;
+        
+        var is_correct = ex.answer == ex.operation(ex.number1, ex.number2);
+        
+        if (is_correct) {
+            ex.correct++; 
+            if (ex.timer_started) ex.correct_timer++;
+            ex.color = "green";
+        }
+        else {
+            ex.incorrect++;
+            if (ex.timer_started) ex.incorrect_timer++;
+            ex.color = "red";
+        }
+        
+        saveToStorage(ex);
+        
+        $timeout(function() {
+            ex.color = "black";
+            ex.answer = "";
+            ex.nextNumbers();
+        }, 500);
+
+		var afterOpacityLevel = ex.correct - ex.opacityLevel;
+		ex.opacity = afterOpacityLevel < 0 ? 1 : (100-afterOpacityLevel)/100;
+
+    };
+
+    $scope.startTimer = function(ex, $event) {
+    	ex.timer_started = true;
+    	
+    	$($event.target).prev().focus()
+		
+		ex.correct_timer = 0;
+		ex.incorrect_timer = 0;
+		
+		var seconds_left = 3*60;
+		
+		var timer = setInterval(function() {
+			$scope.$apply(function() {
+				var minutes = Math.floor(seconds_left/60);
+				var seconds = seconds_left%60;
+				if (seconds < 10) seconds = "0" + seconds;
+				ex.timer = minutes + ":" + seconds;
+				seconds_left--;
+				if (seconds_left < 0)
+				{
+					clearTimeout(timer);
+					ex.timer_started = false;
+					ex.timer = ex.timerText;
+					saveCurrentRecord(ex);
+				}
+			});
+		}, 1000);
+    };
+    
+    
+};
+//]]>  
+
+</script>
+
+
+</head>
+<body>
+  
+<body ng-app>
+
+<div ng-controller="defaultCtrl">
+    
+    <div ng-repeat="ex in exercises" ng-style="{opacity: ex.opacity}">
+    	<div class="records">
+    		<div ng-repeat="rec in ex.records | orderBy:'date':true track by $index" ng-style="{'font-weight': rec.newRecord ? 'bold' : 'normal'}">
+    		{{rec.date | date: "dd.MM.yy HH:mm"}} - {{rec.record}}
+    		</div>
+    	</div>
+        <div>
+            {{ex.number1}} {{ex.operationText}} {{ex.number2}}
+            =
+            <input size="3" ng-keyup="enter(ex, $event)" ng-model="ex.answer" ng-style="{color: ex.color}"></input>
+            <input type="button" ng-value="ex.timer" ng-click="startTimer(ex, $event)" ng-disabled="ex.timer_started"></input>
+        </div>
+        <div style="color:green">
+            Правильно: {{ex.correct}} ({{ex.correct_timer}})
+        </div>
+        <div style="color:red">
+            Неправильно: {{ex.incorrect}} ({{ex.incorrect_timer}})     
+        </div>
+        <hr/>
+    </div>
+    
+</div>
+    
+</body>
+  
+</body>
+
+
+</html>
+
+
