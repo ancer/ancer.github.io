@@ -127,8 +127,20 @@ function defaultCtrl($scope, $timeout) {
         "x",
         opacityLevel);
     }
+
+    function Several() {
+        return new Exercise(
+        "ex3456",
+        function() {
+            var n1 = Math.floor(Math.random() * 11);
+            var n2 = Math.floor(Math.random() * 4 + 3);
+            return Math.random() > 0.5 ? [n1, n2] : [n2, n1];
+        },
+        function(a, b) { return a * b; },
+        "x");
+    }
     
-    $scope.exercises = [/*Mul(3), Mul(4, 1200),*/ Mul(6, 1100), Mul(7)];
+    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7),*/ Several()];
     $scope.multable = readMulTable();
 
     $timeout(function() {
@@ -161,9 +173,11 @@ function defaultCtrl($scope, $timeout) {
         saveMulTable($scope.multable);
 
         var span = $("div.multable > div:nth-child(" + (ex.number1 + 2) + ") > div:nth-child(" + (ex.number2 + 2) + ") span.value");
-        span.show();
         span.css({opacity: 1});
-        span.fadeOut(2000);
+        span.fadeOut(2000, function() {
+            span.css({opacity: 0});
+            span.show();
+        });
         
         saveToStorage(ex);
         
