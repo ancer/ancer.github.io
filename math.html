@@ -57,6 +57,21 @@
 
 function defaultCtrl($scope, $timeout) {
 
+    $scope.getMulTableValue = function(row, col) {
+        var multableIndex = row*11 + col;
+        return $scope.multable[multableIndex] || 0;
+    }
+
+    $scope.updateMulTableValue = function(row, col, correct) {
+        var value = $scope.getMulTableValue(row, col);
+
+        if (correct) value++;
+        else value -= 5;
+
+        var multableIndex = row*11 + col;
+        $scope.multable[multableIndex] = value;
+    }
+
     function readMulTable() {
         return JSON.parse(localStorage.getItem("multable")) || [];
     }
@@ -129,19 +144,58 @@ function defaultCtrl($scope, $timeout) {
     }
 
     function Several() {
+
+        function enumerateMulTable(numbers, handlerFunc) {            
+            // Cols
+            numbers.forEach(function(col) {
+                for (var row = 0; row <= 10; row++) handlerFunc(row, col, $scope.getMulTableValue(row, col));
+            });
+
+            // Rows
+            numbers.forEach(function(row) {
+                for (var col = 0; col <= 10; col++)
+                    if (numbers.indexOf(col) == -1) handlerFunc(row, col, $scope.getMulTableValue(row, col));
+            });
+        }
+
+        function getCrossingProbability(x, y, median) {
+            return Math.abs($scope.getMulTableValue(x, y) - median) + 1;
+        }
+
         return new Exercise(
         "ex3456",
         function() {
-            var n1 = Math.floor(Math.random() * 11);
-            var n2 = Math.floor(Math.random() * 4 + 3);
-            return Math.random() > 0.5 ? [n1, n2] : [n2, n1];
+
+            var numbers = [3, 4, 5, 6];
+
+            var allValues = [];
+            enumerateMulTable(numbers, function(x, y, value) { allValues.push(value); });
+            allValues.sort(function(a, b) { return a-b; });
+            var median = allValues[allValues.length/2];
+
+            var sumProb = 0;
+            enumerateMulTable(numbers, function(x, y, value) { sumProb += getCrossingProbability(x, y, median); });
+            console.log(sumProb)
+            
+            var r = Math.floor(Math.random() * sumProb);
+            var n1 = -1;
+            var n2 = -1;
+            enumerateMulTable(numbers, function(x, y) { 
+                r -= getCrossingProbability(x, y, median);
+                if (r <= 0 && n1 == -1) {
+                    n1 = x;
+                    n2 = y;
+                }
+            });
+
+            return [n1, n2];
         },
         function(a, b) { return a * b; },
         "x");
     }
     
-    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7),*/ Several()];
     $scope.multable = readMulTable();
+    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7),*/ Several(), Mul(5)];
 
     $timeout(function() {
 
@@ -154,22 +208,18 @@ function defaultCtrl($scope, $timeout) {
         
         var is_correct = ex.answer == ex.operation(ex.number1, ex.number2);
 
-        var multableIndex = ex.number1*11 + ex.number2;
-        var mulValue = $scope.multable[multableIndex] || 0;
-
         if (is_correct) {
             ex.correct++;
             if (ex.timer_started) ex.correct_timer++;
             ex.color = "green";
-            mulValue++;
         }
         else {
             ex.incorrect++;
             if (ex.timer_started) ex.incorrect_timer++;
             ex.color = "red";
-            mulValue -= 5;
         }
-        $scope.multable[multableIndex] = mulValue;
+
+        $scope.updateMulTableValue(ex.number1, ex.number2, is_correct);
         saveMulTable($scope.multable);
 
         var span = $("div.multable > div:nth-child(" + (ex.number1 + 2) + ") > div:nth-child(" + (ex.number2 + 2) + ") span.value");
@@ -239,11 +289,11 @@ function defaultCtrl($scope, $timeout) {
             <div ng-repeat="y in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]" 
                 class="cell" 
                 ng-class="{row: x == -1, col: y == -1}"
-                style="background-color: {{y != -1 && x != -1? 'hsl(' + (60+multable[x*11+y]) + ', 100%, 50%)' : 'white'}}">
+                style="background-color: {{y != -1 && x != -1? 'hsl(' + (60+getMulTableValue(x, y)) + ', 100%, 50%)' : 'white'}}">
                 <span ng-if="x == -1 && y == -1">x</span>
                 <span ng-if="x == -1 && y != -1">{{y}}</span>
                 <span ng-if="y == -1 && x != -1">{{x}}</span>
-                <span ng-if="y != -1 && x != -1" class="value" title="{{multable[x*11+y]}}">{{x*y}}</span>
+                <span ng-if="y != -1 && x != -1" class="value" title="{{getMulTableValue(x, y)}}">{{x*y}}</span>
             </div>
        </div>
     </div>
