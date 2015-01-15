@@ -84,12 +84,14 @@ function defaultCtrl($scope, $timeout) {
 	{
 		localStorage.setItem(ex.name + "-correct", ex.correct);
 		localStorage.setItem(ex.name + "-incorrect", ex.incorrect);
+        localStorage.setItem(ex.name + "-stars", ex.stars);
 	}
 
 	function getFromStorage(ex)
 	{
 		ex.correct = Number(localStorage.getItem(ex.name + "-correct"));
 		ex.incorrect = Number(localStorage.getItem(ex.name + "-incorrect"));
+        ex.stars = Number(localStorage.getItem(ex.name + "-stars"));
 		ex.records = JSON.parse(localStorage.getItem(ex.name + "-records")) || [];
 	}
 
@@ -113,7 +115,7 @@ function defaultCtrl($scope, $timeout) {
         this.operation = operation;
         this.operationText = operationText;
         this.opacityLevel = opacityLevel || 1000;
-        this.correct = this.correct_timer = this.incorrect = this.incorrect_timer = 0;
+        this.correct = this.correct_timer = this.incorrect = this.incorrect_timer = this.stars = 0;
         this.nextNumbers = function() {
             var numbers = numbersGenerator();
             this.number1 = numbers[0];
@@ -158,8 +160,9 @@ function defaultCtrl($scope, $timeout) {
             });
         }
 
-        function getCrossingProbability(x, y, median) {
-            return Math.abs($scope.getMulTableValue(x, y) - median) + 1;
+        function getCrossingProbability(x, y, maxVal) {
+            var diff = maxVal - $scope.getMulTableValue(x, y);
+            return diff*diff + 1;
         }
 
         return new Exercise(
@@ -168,20 +171,21 @@ function defaultCtrl($scope, $timeout) {
 
             var numbers = [3, 4, 5, 6];
 
-            var allValues = [];
-            enumerateMulTable(numbers, function(x, y, value) { allValues.push(value); });
-            allValues.sort(function(a, b) { return a-b; });
-            var median = allValues[allValues.length/2];
+            var maxVal = 0;
+            enumerateMulTable(numbers, function(x, y, value) { maxVal = Math.max(maxVal, value); });
 
             var sumProb = 0;
-            enumerateMulTable(numbers, function(x, y, value) { sumProb += getCrossingProbability(x, y, median); });
+            enumerateMulTable(numbers, function(x, y, value) { 
+                var prob = getCrossingProbability(x, y, maxVal);
+                sumProb += prob;
+            });
             console.log(sumProb)
             
             var r = Math.floor(Math.random() * sumProb);
             var n1 = -1;
             var n2 = -1;
             enumerateMulTable(numbers, function(x, y) { 
-                r -= getCrossingProbability(x, y, median);
+                r -= getCrossingProbability(x, y, maxVal);
                 if (r <= 0 && n1 == -1) {
                     n1 = x;
                     n2 = y;
@@ -209,11 +213,13 @@ function defaultCtrl($scope, $timeout) {
         var is_correct = ex.answer == ex.operation(ex.number1, ex.number2);
 
         if (is_correct) {
+            ex.stars += 5;
             ex.correct++;
             if (ex.timer_started) ex.correct_timer++;
             ex.color = "green";
         }
         else {
+            ex.stars -= 10;
             ex.incorrect++;
             if (ex.timer_started) ex.incorrect_timer++;
             ex.color = "red";
@@ -270,7 +276,16 @@ function defaultCtrl($scope, $timeout) {
 		}, 1000);
     };
     
+    $scope.getArray = function(count) {
+        count = Math.floor(count);
+        if (count == 0) return [];
+        return new Array(count);
+    }
     
+    $scope.removeStar = function(ex) {
+        ex.stars -= 100;
+        saveToStorage(ex);
+    }
 };
 //]]>  
 
@@ -315,6 +330,11 @@ function defaultCtrl($scope, $timeout) {
         </div>
         <div style="color:red">
             Неправильно: {{ex.incorrect}} ({{ex.incorrect_timer}})     
+        </div>
+        <div>
+            Звездочки: 
+            <span ng-repeat="s in getArray(ex.stars/100) track by $index" ng-dblclick="removeStar(ex)">&#9733; </span>
+            ({{ex.stars}})
         </div>
         <hr/>
     </div>
