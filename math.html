@@ -31,8 +31,8 @@
 
     .cell {
         float: left;
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
     }
 
     .row {
@@ -48,6 +48,19 @@
         height: 100%;
         background: white;
         opacity: 0;
+    }
+
+    span.star {
+        position: relative;
+        color: gray;
+    }
+
+    span.star span {
+        position: absolute;;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
     }
   </style>
   
@@ -145,7 +158,7 @@ function defaultCtrl($scope, $timeout) {
         opacityLevel);
     }
 
-    function Several() {
+    function Several(nums) {
 
         function enumerateMulTable(numbers, handlerFunc) {            
             // Cols
@@ -165,17 +178,18 @@ function defaultCtrl($scope, $timeout) {
             return diff*diff + 1;
         }
 
+        var name = nums.length == 1 ? "mul" : "ex";
+        for (var i = 0; i < nums.length; i++) name += nums[i];
+
         return new Exercise(
-        "ex3456",
+        name,
         function() {
 
-            var numbers = [3, 4, 5, 6];
-
             var maxVal = 0;
-            enumerateMulTable(numbers, function(x, y, value) { maxVal = Math.max(maxVal, value); });
+            enumerateMulTable(nums, function(x, y, value) { maxVal = Math.max(maxVal, value); });
 
             var sumProb = 0;
-            enumerateMulTable(numbers, function(x, y, value) { 
+            enumerateMulTable(nums, function(x, y, value) { 
                 var prob = getCrossingProbability(x, y, maxVal);
                 sumProb += prob;
             });
@@ -184,7 +198,7 @@ function defaultCtrl($scope, $timeout) {
             var r = Math.floor(Math.random() * sumProb);
             var n1 = -1;
             var n2 = -1;
-            enumerateMulTable(numbers, function(x, y) { 
+            enumerateMulTable(nums, function(x, y) { 
                 r -= getCrossingProbability(x, y, maxVal);
                 if (r <= 0 && n1 == -1) {
                     n1 = x;
@@ -199,7 +213,7 @@ function defaultCtrl($scope, $timeout) {
     }
     
     $scope.multable = readMulTable();
-    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7),*/ Several(), Mul(5)];
+    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7),*/ Several([3, 4, 5, 6]), Several([4])];
 
     $timeout(function() {
 
@@ -213,13 +227,13 @@ function defaultCtrl($scope, $timeout) {
         var is_correct = ex.answer == ex.operation(ex.number1, ex.number2);
 
         if (is_correct) {
-            ex.stars += 5;
+            ex.stars += 2;
             ex.correct++;
             if (ex.timer_started) ex.correct_timer++;
             ex.color = "green";
         }
         else {
-            ex.stars -= 10;
+            ex.stars -= 4;
             ex.incorrect++;
             if (ex.timer_started) ex.incorrect_timer++;
             ex.color = "red";
@@ -244,7 +258,7 @@ function defaultCtrl($scope, $timeout) {
         }, 500);
 
 		var afterOpacityLevel = ex.correct - ex.opacityLevel;
-		ex.opacity = afterOpacityLevel < 0 ? 1 : (100-afterOpacityLevel)/100;
+		//ex.opacity = afterOpacityLevel < 0 ? 1 : (100-afterOpacityLevel)/100;
 
     };
 
@@ -333,8 +347,8 @@ function defaultCtrl($scope, $timeout) {
         </div>
         <div>
             Звездочки: 
-            <span ng-repeat="s in getArray(ex.stars/100) track by $index" ng-dblclick="removeStar(ex)">&#9733; </span>
-            ({{ex.stars}})
+            <span ng-repeat="s in getArray(ex.stars/100) track by $index" ng-dblclick="removeStar(ex)">&#9733;</span>
+            <span class="star">&#9733;<span ng-style="{height: (100-ex.stars%100)+'%'}"></span></span>
         </div>
         <hr/>
     </div>
