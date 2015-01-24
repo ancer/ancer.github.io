@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -68,7 +67,7 @@
 
 <script type='text/javascript'>//<![CDATA[ 
 
-function defaultCtrl($scope, $timeout) {
+function defaultCtrl($scope, $timeout, $sce) {
 
     $scope.getMulTableValue = function(row, col) {
         var multableIndex = row*11 + col;
@@ -120,19 +119,21 @@ function defaultCtrl($scope, $timeout) {
 		localStorage.setItem(ex.name + "-records", JSON.stringify(ex.records));
 	}
     
-    function Exercise(name, numbersGenerator, operation, operationText, opacityLevel)
+    function Exercise(name, numbersGenerator)
     {
 		
         this.name = name;
         this.numbersGenerator = numbersGenerator;
-        this.operation = operation;
-        this.operationText = operationText;
-        this.opacityLevel = opacityLevel || 1000;
+        this.stars = 0;
+        this.opacityLevel = 1000;
         this.correct = this.correct_timer = this.incorrect = this.incorrect_timer = this.stars = 0;
         this.nextNumbers = function() {
-            var numbers = numbersGenerator();
-            this.number1 = numbers[0];
-            this.number2 = numbers[1];
+        	var numbersObj = null;
+        	while (numbersObj == null) {
+        		numbersObj = numbersGenerator();
+        	}
+            this.numbersObj = numbersObj;
+            this.exerciseText = $sce.trustAsHtml(numbersObj.exerciseText);
         };
         
         this.timerText = "Таймер";
@@ -145,20 +146,7 @@ function defaultCtrl($scope, $timeout) {
 		getFromStorage(this);
     }
 
-    function Mul(num, opacityLevel) {
-        return new Exercise(
-        "mul" + num,
-        function () { 
-            var n1 = Math.floor(Math.random() * 11);
-            var n2 = num;
-            return Math.random() > 0.5 ? [n1, n2] : [n2, n1];
-        },
-        function (a, b) { return a * b; },
-        "x",
-        opacityLevel);
-    }
-
-    function Several(nums) {
+    function Mul(nums, division) {
 
         function enumerateMulTable(numbers, handlerFunc) {            
             // Cols
@@ -178,7 +166,7 @@ function defaultCtrl($scope, $timeout) {
             return diff*diff + 1;
         }
 
-        var name = nums.length == 1 ? "mul" : "ex";
+        var name = division ? "div" : nums.length == 1 ? "mul" : "ex";
         for (var i = 0; i < nums.length; i++) name += nums[i];
 
         return new Exercise(
@@ -193,7 +181,6 @@ function defaultCtrl($scope, $timeout) {
                 var prob = getCrossingProbability(x, y, maxVal);
                 sumProb += prob;
             });
-            console.log(sumProb)
             
             var r = Math.floor(Math.random() * sumProb);
             var n1 = -1;
@@ -205,50 +192,67 @@ function defaultCtrl($scope, $timeout) {
                     n2 = y;
                 }
             });
+            
+            if (division && n1 == 0) return null;
 
-            return [n1, n2];
-        },
-        function(a, b) { return a * b; },
-        "x");
+            function update(n1, n2, correct) {
+                $scope.updateMulTableValue(n1, n2, correct);
+                saveMulTable($scope.multable);
+
+                var span = $("div.multable > div:nth-child(" + (n1 + 2) + ") > div:nth-child(" + (n2 + 2) + ") span.value");
+                span.css({opacity: 1});
+                span.fadeOut(2000, function() {
+                    span.css({opacity: 0});
+                    span.show();
+                });
+            }
+
+            return division ?
+            {
+                exerciseText: n1*n2 + " : " + n1,
+                starsIncrement: 3,
+                verifyAnswer: function(answer) {
+                    var correct = answer == n1*n2 / n1;
+                    update(n1, n2, correct);
+                    return correct;
+                }
+            }
+            :
+            {
+                exerciseText: n1 + " &times " + n2,
+                starsIncrement: 2,
+                verifyAnswer: function(answer) {
+                    var correct = answer == n1*n2;
+                    update(n1, n2, correct);
+                    return correct;
+                }
+            }
+        });
     }
     
     $scope.multable = readMulTable();
-    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7),*/ Several([3, 4, 5, 6]), Several([4])];
+    $scope.exercises = [/*Mul(3), Mul(4, 1600), Mul(5), Mul(6, 1100), Mul(7), Mul([3, 4, 5, 6]),*/ Mul([3, 4, 5, 6], true)];
 
-    $timeout(function() {
-
-    });
-            
     $scope.enter = function(ex, $event) {
         if ($event.keyCode != 13) return;
         if (ex.answer == "") return;
         if (ex.color != "black") return;
         
-        var is_correct = ex.answer == ex.operation(ex.number1, ex.number2);
+        var is_correct = ex.numbersObj.verifyAnswer(ex.answer);
 
         if (is_correct) {
-            ex.stars += 2;
             ex.correct++;
             if (ex.timer_started) ex.correct_timer++;
+            ex.stars += ex.numbersObj.starsIncrement;
             ex.color = "green";
         }
         else {
-            ex.stars -= 4;
             ex.incorrect++;
             if (ex.timer_started) ex.incorrect_timer++;
+            ex.stars -= ex.numbersObj.starsIncrement*2;
             ex.color = "red";
         }
 
-        $scope.updateMulTableValue(ex.number1, ex.number2, is_correct);
-        saveMulTable($scope.multable);
-
-        var span = $("div.multable > div:nth-child(" + (ex.number1 + 2) + ") > div:nth-child(" + (ex.number2 + 2) + ") span.value");
-        span.css({opacity: 1});
-        span.fadeOut(2000, function() {
-            span.css({opacity: 0});
-            span.show();
-        });
-        
         saveToStorage(ex);
         
         $timeout(function() {
@@ -257,7 +261,7 @@ function defaultCtrl($scope, $timeout) {
             ex.nextNumbers();
         }, 500);
 
-		var afterOpacityLevel = ex.correct - ex.opacityLevel;
+		//var afterOpacityLevel = ex.correct - ex.opacityLevel;
 		//ex.opacity = afterOpacityLevel < 0 ? 1 : (100-afterOpacityLevel)/100;
 
     };
@@ -334,7 +338,7 @@ function defaultCtrl($scope, $timeout) {
     		</div>
     	</div>
         <div>
-            {{ex.number1}} {{ex.operationText}} {{ex.number2}}
+            <span ng-bind-html="ex.exerciseText"></span>
             =
             <input size="3" ng-keyup="enter(ex, $event)" ng-model="ex.answer" ng-style="{color: ex.color}"></input>
             <input type="button" ng-value="ex.timer" ng-click="startTimer(ex, $event)" ng-disabled="ex.timer_started"></input>
