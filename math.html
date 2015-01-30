@@ -1,4 +1,4 @@
-
+п»ї
 <!DOCTYPE html>
 <html>
 <head>
@@ -136,7 +136,7 @@ function defaultCtrl($scope, $timeout, $sce) {
             this.exerciseText = $sce.trustAsHtml(numbersObj.exerciseText);
         };
         
-        this.timerText = "Таймер";
+        this.timerText = "РўР°Р№РјРµСЂ";
 		this.timer = this.timerText;
         
         this.timer_started = false;
@@ -344,13 +344,13 @@ function defaultCtrl($scope, $timeout, $sce) {
             <input type="button" ng-value="ex.timer" ng-click="startTimer(ex, $event)" ng-disabled="ex.timer_started"></input>
         </div>
         <div style="color:green">
-            Правильно: {{ex.correct}} ({{ex.correct_timer}})
+            РџСЂР°РІРёР»СЊРЅРѕ: {{ex.correct}} ({{ex.correct_timer}})
         </div>
         <div style="color:red">
-            Неправильно: {{ex.incorrect}} ({{ex.incorrect_timer}})     
+            РќРµРїСЂР°РІРёР»СЊРЅРѕ: {{ex.incorrect}} ({{ex.incorrect_timer}})     
         </div>
         <div>
-            Звездочки: 
+            Р—РІРµР·РґРѕС‡РєРё: 
             <span ng-repeat="s in getArray(ex.stars/100) track by $index" ng-dblclick="removeStar(ex)">&#9733;</span>
             <span class="star">&#9733;<span ng-style="{height: (100-ex.stars%100)+'%'}"></span></span>
         </div>
