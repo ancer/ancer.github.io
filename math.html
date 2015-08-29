@@ -68,6 +68,10 @@
         width: 100%;
         background: white;
     }
+
+    span.multiply {
+        color: gray;
+    }
   </style>
   
 
@@ -151,6 +155,126 @@ function defaultCtrl($scope, $timeout, $sce) {
         
         this.nextNumbers();
 		getFromStorage(this);
+    }
+
+    function ComplexMul() {
+        var step = 3;
+        var x, y;
+        var aux_results = [0, 0, 0];
+
+        var y_help;
+
+        var mainText;
+
+        return new Exercise(
+            "complex_mul",
+            function()
+            {
+                step++;
+
+                if (step == 4) {
+                    x = Math.floor(Math.random()*1000);
+                    y = Math.floor(Math.random()*1000);
+                    mainText = "<span class='multiply'>(" + x + " &times " + y + ")</span> ";
+                    y_help = y;
+                    step = 0;
+                }
+
+                if (step < 3) {
+                    var y1 = y_help - (Math.floor(y_help/10)*10);
+                    y_help = Math.floor(y_help/10);
+                    aux_results[step] = x * y1 * Math.pow(10, step);
+
+                    return {
+                        exerciseText: mainText + x + " &times " + y1,
+                        starsIncrement: 15,
+                        starsDecrement: 5,
+                        verifyAnswer: function(answer) {
+                            return answer == x * y1;
+                        }
+                    };
+                }
+                else {
+                    return {
+                        exerciseText: mainText + aux_results[0] + " + " + aux_results[1] + " + " + aux_results[2],
+                        starsIncrement: 10,
+                        starsDecrement: 5,
+                        verifyAnswer: function(answer) { return answer == aux_results[0] + aux_results[1] + aux_results[2]; }
+                    }
+                }
+            }
+            );
+    }
+
+    function ComplexMul2() {
+        var step = 2;
+        var x, y;
+        var aux_results = [0, 0];
+
+        var y_help;
+
+        var mainText;
+
+        return new Exercise(
+            "complex_mul2",
+            function()
+            {
+                step++;
+
+                if (step == 3) {
+                    x = Math.floor(Math.random()*100);
+                    y = Math.floor(Math.random()*100);
+                    mainText = "<span class='multiply'>(" + x + " &times " + y + ")</span> ";
+                    y_help = y;
+                    step = 0;
+                }
+
+                if (step < 2) {
+                    var y1 = y_help - (Math.floor(y_help/10)*10);
+                    y_help = Math.floor(y_help/10);
+                    aux_results[step] = x * y1 * Math.pow(10, step);
+
+                    return {
+                        exerciseText: mainText + x + " &times " + y1,
+                        starsIncrement: 12,
+                        starsDecrement: 3,
+                        verifyAnswer: function(answer) {
+                            return answer == x * y1;
+                        }
+                    };
+                }
+                else {
+                    return {
+                        exerciseText: mainText + aux_results[0] + " + " + aux_results[1],
+                        starsIncrement: 7,
+                        starsDecrement: 2,
+                        verifyAnswer: function(answer) { return answer == aux_results[0] + aux_results[1]; }
+                    }
+                }
+            }
+            );
+    }
+
+    function BigMul()
+    {
+        return new Exercise(
+            "bigmul",
+            function()
+            {
+                var x = Math.floor(Math.random()*1000);
+                var y = Math.floor(Math.random()*1000);
+
+                return {
+                    exerciseText: x + " &times " + y,
+                    starsIncrement: 50,
+                    starsDecrement: 0,
+                    verifyAnswer: function(answer) {
+                        var correct = answer == x * y;
+                        return correct;
+                    }
+                }
+            }
+            );
     }
 
     function Mul(nums, divisionProb) {
@@ -240,7 +364,7 @@ function defaultCtrl($scope, $timeout, $sce) {
     }
     
     $scope.multable = readMulTable();
-    $scope.exercises = [Mul([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.66), Mul([7], 0)];
+    $scope.exercises = [Mul([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.66), ComplexMul2(), ComplexMul(), BigMul()];
 
     $scope.enter = function(ex, $event) {
         if ($event.keyCode != 13) return;
@@ -258,7 +382,9 @@ function defaultCtrl($scope, $timeout, $sce) {
         else {
             ex.incorrect++;
             if (ex.timer_started) ex.incorrect_timer++;
-            ex.stars -= ex.numbersObj.starsIncrement*2;
+            var decrement = ex.numbersObj.starsDecrement;
+            if (decrement == undefined) decrement = ex.numbersObj.starsIncrement*2;
+            ex.stars -= decrement;
             ex.color = "red";
         }
 
@@ -266,8 +392,10 @@ function defaultCtrl($scope, $timeout, $sce) {
         
         $timeout(function() {
             ex.color = "black";
-            ex.answer = "";
-            ex.nextNumbers();
+            if (is_correct) {
+                ex.answer = "";
+                ex.nextNumbers();
+            }
         }, 500);
 
 		//var afterOpacityLevel = ex.correct - ex.opacityLevel;
