@@ -206,55 +206,6 @@ function defaultCtrl($scope, $timeout, $sce) {
             );
     }
 
-    function ComplexMul2() {
-        var step = 2;
-        var x, y;
-        var aux_results = [0, 0];
-
-        var y_help;
-
-        var mainText;
-
-        return new Exercise(
-            "complex_mul2",
-            function()
-            {
-                step++;
-
-                if (step == 3) {
-                    x = Math.floor(Math.random()*100);
-                    y = Math.floor(Math.random()*100);
-                    mainText = "<span class='multiply'>(" + x + " &times " + y + ")</span> ";
-                    y_help = y;
-                    step = 0;
-                }
-
-                if (step < 2) {
-                    var y1 = y_help - (Math.floor(y_help/10)*10);
-                    y_help = Math.floor(y_help/10);
-                    aux_results[step] = x * y1 * Math.pow(10, step);
-
-                    return {
-                        exerciseText: mainText + x + " &times " + y1,
-                        starsIncrement: 12,
-                        starsDecrement: 3,
-                        verifyAnswer: function(answer) {
-                            return answer == x * y1;
-                        }
-                    };
-                }
-                else {
-                    return {
-                        exerciseText: mainText + aux_results[0] + " + " + aux_results[1],
-                        starsIncrement: 7,
-                        starsDecrement: 2,
-                        verifyAnswer: function(answer) { return answer == aux_results[0] + aux_results[1]; }
-                    }
-                }
-            }
-            );
-    }
-
     function BigMul()
     {
         return new Exercise(
@@ -299,7 +250,16 @@ function defaultCtrl($scope, $timeout, $sce) {
 
         var name = divisionProb >= 0.5 ? "div" : nums.length == 1 ? "mul" : "ex";
         for (var i = 0; i < nums.length; i++) name += nums[i];
+        
+        var sizeCoef = (nums.length == 1 ? Math.log10(2)/1.5 : Math.log10(nums.length));
+        sizeCoef = sizeCoef*2/3 + 0.33;
+        
+        var starsIfDivision = sizeCoef * 6;
+        var starsIfMultiplication = sizeCoef * 4;
 
+		console.log(name);
+		console.log(starsIfDivision + ":" + starsIfMultiplication);
+        
         return new Exercise(
         name,
         function() {
@@ -339,11 +299,12 @@ function defaultCtrl($scope, $timeout, $sce) {
                     span.show();
                 });
             }
-
+            
+            
             return division ?
             {
                 exerciseText: n1*n2 + " : " + n1,
-                starsIncrement: 2.5,
+                starsIncrement: starsIfDivision,
                 verifyAnswer: function(answer) {
                     var correct = answer == n1*n2 / n1;
                     update(n1, n2, correct);
@@ -353,7 +314,7 @@ function defaultCtrl($scope, $timeout, $sce) {
             :
             {
                 exerciseText: n1 + " &times " + n2,
-                starsIncrement: 1.7,
+                starsIncrement: starsIfMultiplication,
                 verifyAnswer: function(answer) {
                     var correct = answer == n1*n2;
                     update(n1, n2, correct);
@@ -364,7 +325,7 @@ function defaultCtrl($scope, $timeout, $sce) {
     }
     
     $scope.multable = readMulTable();
-    $scope.exercises = [Mul([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.66), ComplexMul2(), ComplexMul(), BigMul()];
+    $scope.exercises = [Mul([2, 3], 0.33), ComplexMul(), BigMul(), Mul([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.66)];
 
     $scope.enter = function(ex, $event) {
         if ($event.keyCode != 13) return;
